@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: This template deploys Cognito Post Confirmation User Exporter Function
+Parameters:
+  FunctionName:
+    Type: String
+    Default: cognito-user-exporter
+  UserTableName:
+    Type: String
+    Default: Users
+  UserGroupName:
+    Type: String
+  Environment:
+    Type: String
+    Default: dev
+  Application:
+    Type: String
+    Default: tafalk
+Resources:
+  CognitoUserExporterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      CodeUri: ./
+      Handler: "lambda_function.lambda_handler"
+      Environment:
+        Variables:
+          DB_USER_TABLE_NAME: !Ref UserTableName
+          COGNITO_USER_GROUP_NAME: !Ref UserGroupName
+      MemorySize: 128
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "cognito-idp:AdminAddUserToGroup"
+                - "cognito-idp:GetGroup"
+                - "cognito-idp:AdminGetUser"
+                - "dynamodb:*"
+              Resource: "*"
+      Runtime: python3.8
+      Timeout: 3
+      Tags:
+        Environment: !Ref Environment
+        Application: !Ref Application
+
+  CognitoUserExporterFunctionPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt CognitoUserExporterFunction.Arn
+      Principal: "cognito-idp.amazonaws.com"
+      SourceArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
